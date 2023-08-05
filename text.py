@@ -37,15 +37,18 @@ class MatchDetailText(Text):
         return self.content["matchSample"]["group_name"]
 
     def get_score(self):
-        score = {"team_A": self.content["matchSample"]["fs_A"],
-                 "team_B": self.content["matchSample"]["fs_B"], }
+        score = {"team_A": self.content["matchSample"]["as_A"],
+                 "team_B": self.content["matchSample"]["as_B"], }
         return score
 
     def get_start_play(self):
         return datetime.datetime.fromisoformat(self.content["matchSample"]["start_play"])
 
-    def get_team_a_names(self):
+    def get_team_a_name(self):
         return self.content["matchSample"]["team_A_name"]
+
+    def get_team_b_name(self):
+        return self.content["matchSample"]["team_B_name"]
 
     def get_team_names(self):
         team_names = {"team_A": self.content["matchSample"]["team_A_name"],

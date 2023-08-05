@@ -1,4 +1,6 @@
+import time
 from connector import Connector
+from multiprocessing.dummy import Pool
 from text import *
 
 
@@ -13,7 +15,7 @@ def main():
     print(match_detail_text.get_group_name())
     print(match_detail_text.get_start_play())
     print(match_detail_text.get_team_names())
-    print(match_detail_text.get_team_a_names())
+    print(match_detail_text.get_team_a_name())
     print(match_detail_text.get_score())
 
     # 另一个示例
@@ -39,18 +41,46 @@ def main():
     print(round_id, gameweeks)
 
     # 获取所有场次的match_id
+    print(f"使用单线程获取所有场次的match_id，需要访问{len(gameweeks)}次")
+    start = time.time()
     all_match_ids = []
     for gameweek in gameweeks:
-        gameweek_schedule = ScheduleText(raw=Connector.schedule(season_id=season_id, round_id=round_id, gameweek=gameweek))
+        gameweek_schedule = ScheduleText(
+            raw=Connector.schedule(season_id=season_id, round_id=round_id, gameweek=gameweek))
         all_match_ids.extend(gameweek_schedule.get_matches_ids())
     print(all_match_ids)
+    end = time.time()
+    spend = end - start
+    print(f"总耗时{spend}秒， 平均每单元耗时{spend / len(gameweeks)}秒")
 
     # 获取所有场次的team_names
-    for match_id in all_match_ids:
+    print(f"使用多线程获取所有场次的队伍名，需要访问{len(all_match_ids)}次")
+    start = time.time()
+
+    # match_texts列表存放MatchDetailText的实例
+    match_texts = []
+    # 建立线程池，设置线程数为100
+    pool = Pool(100)
+
+    # 将单个线程执行的任务封装为函数
+    # 接收一个match_id，将获取的文本实例化并append
+    def single_thread(match_id):
         raw = Connector.match_detail(match_id=match_id)
         match_detail_text = MatchDetailText(raw=raw)
-        print(match_detail_text.get_team_names())
+        match_texts.append(match_detail_text)
 
+    # 将all_match_ids的元素分配给single_thread函数，并多线程执行
+    pool.map(single_thread, all_match_ids)
+
+    # 由于网速浮动，比赛信息虽然是按序访问，但并不是按序写入，所以对Text实例按比赛开始的时间进行排序
+    sorted_match_texts = sorted(match_texts, key=lambda text: text.get_start_play())
+    # 打印结果
+    for text in sorted_match_texts:
+        print(f"{text.get_start_play()}: {text.get_team_a_name()} vs {text.get_team_b_name()}")
+
+    end = time.time()
+    spend = end - start
+    print(f"耗时{spend}秒，平均每单元耗时{spend / len(all_match_ids)}秒")
 
 
 if __name__ == "__main__":
